@@ -25,16 +25,18 @@ library(knitr)
 
 
 main_dir="/cloud/project/"
-main_dir="/home/jl/Dropbox/university/UPF_msc/PGB_2020/project_summary/pgb2020"
+#main_dir="/home/jl/Dropbox/university/UPF_msc/PGB_2020/project_summary/pgb2020"
 raw_dir=paste0(main_dir,"/PGB2020_raw_files")
 ```
+# Yeast Genomes
 
+## Gathering the data
 First a basic look at number of contigs / chromosomes in the different species.
 
-```{r echo = FALSE, results = 'Summary Table', include=TRUE}
+```{r echo = TRUE, results = 'Summary Table', include=TRUE}
 file.list<- list.files(path=paste0(main_dir,'/results/'), pattern='*fasta_*', recursive = TRUE, full.names = FALSE)
-
 fasta_data<-data.frame()
+
 #Concatenate all datasets together. File name as column
 for (f in file.list) {
     #set filename and dataset
@@ -46,6 +48,12 @@ for (f in file.list) {
 names(fasta_data)<-c('contig','length','fname','species')
 
 fasta_summary <- fasta_data %>% group_by(species) %>% summarise(ncontigs=n(), length=sum(length))
+```
+
+## Exploratory plots
+
+### Genome sizes / assemblies
+```{r echo = TRUE, include = TRUE, fig.width = 10, fig.height=8}
 
 ggplot(data=fasta_summary, aes(x=reorder(species, ncontigs), y=ncontigs, fill=species)) +
   geom_bar(stat="identity", position=position_dodge()) +
@@ -57,6 +65,10 @@ ggplot(data=fasta_summary, aes(x=reorder(species, ncontigs), y=ncontigs, fill=sp
   xlab('Species')+
   labs(fill='Dataset') +
   coord_flip()
+```
+
+### Contig length distributions
+```{r echo = TRUE, include = TRUE, fig.width = 10, fig.height=8}
 
   ggplot(data=fasta_data, aes(x=species, y=length/1000)) +
     geom_jitter(aes(color=species)) +
@@ -68,8 +80,10 @@ ggplot(data=fasta_summary, aes(x=reorder(species, ncontigs), y=ncontigs, fill=sp
     coord_flip()
 ```
 
+# Transcriptomic reconstructions
 Next we are going to load the dataset basic statistics that we generated with the bash script from your files, so we can plot it.
 
+## Basic statistics
 ```{r echo = FALSE, results = 'Summary Table'}
 summary_table <- read.table(paste0(main_dir,'/results/basic_statistics.tsv'), sep='\t', header=TRUE)
 summary_table$binomial <- paste0(summary_table$genus,' ',summary_table$species)
@@ -78,7 +92,7 @@ kbl(summary_table) %>%
   kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"))
 ```
 
-Number of reconstructed transcripts per species
+### Number of reconstructed transcripts per species
 ```{r echo = TRUE, include = TRUE, fig.width = 10, fig.height=8}
 ggplot(data=summary_table, aes(x=reorder(binomial,num_transcripts), y=num_transcripts, fill=dataset)) +
   geom_bar(stat="identity", position=position_dodge()) +
@@ -92,12 +106,15 @@ ggplot(data=summary_table, aes(x=reorder(binomial,num_transcripts), y=num_transc
   coord_flip()
 ```
 
+### Remember the tree
+
 ```{r yeast_tree, echo=FALSE, fig.cap="yeast evolotionary tree", out.width = '100%'}
 knitr::include_graphics(paste0(main_dir,"metadata/tree.png"))
 ```
 
-We can explore the average size of the reconstructed transcript by dataset
-```{r echo = TRUE, include = TRUE}
+### Average size of transcripts
+
+```{r echo = TRUE, include = TRUE, fig.width = 10, fig.height=8}
 ggplot(data=summary_table, aes(x=reorder(binomial,total_transcript_length), y=((total_transcript_length/num_transcripts)/1000), fill=dataset)) +
     geom_bar(stat="identity", position=position_dodge()) +
     geom_text(aes(label=paste0(round((total_transcript_length/num_transcripts)/1000,2),' Kb')), vjust=0.5, hjust=-0.1, color="black",
@@ -109,9 +126,13 @@ ggplot(data=summary_table, aes(x=reorder(binomial,total_transcript_length), y=((
     labs(fill='Dataset') +
     coord_flip()
 ```
+
+## Load the gff datasets
+
+Construct our big dataset from student's independent files (known and novel gff)
+
 ```{r echo = TRUE, include = TRUE}
 
-##Construct our big dataset from student's independent files (known and novel gff)
 raw_data <- data.frame() #Start empty
 setwd(raw_dir)
 
@@ -159,6 +180,8 @@ for (f in file.list) {
 raw_data[, c(10,16,17)] <- sapply(raw_data[, c(10,16,17)], as.numeric)
 ```
 
+## Merge with summary
+
 ```{r echo = TRUE, include = TRUE}
 #Get info from species by joining the summary dataset
 fname2species <- summary_table %>%
@@ -169,6 +192,41 @@ data <- left_join(raw_data,fname2species, by="fname")
 
 Now we have our dataset containing all the information in the gff files you generated, together with the species and file names. We can play a bit with it
 
+## Explore length
+```{r echo = TRUE, include = TRUE}
+
+ggplot(data, aes((end-start), fill = dataset, colour = dataset)) +
+  geom_density(alpha = 0.1)+
+  scale_fill_manual(values = wes_palette("Royal1"))+
+  scale_colour_manual(values = wes_palette("Royal1"))+
+  theme_minimal() +
+      xlab('Transcript Length')+
+      ylab('Density')+
+      labs(colour='Dataset')+
+      guides(fill=FALSE)+
+      xlim(0,7500)
+```
+
+## Explore length by species
+
+What do you see? What do you think we should plot to have more information?
+
+```{r echo = TRUE, include = TRUE}
+
+ggplot(data, aes((end-start), fill = dataset, colour = dataset)) +
+  geom_density(alpha = 0.1)+
+  scale_fill_manual(values = wes_palette("Royal1"))+
+  scale_colour_manual(values = wes_palette("Royal1"))+
+  theme_minimal() +
+      xlab('Transcript Length')+
+      ylab('Density')+
+      labs(colour='Dataset')+
+      guides(fill=FALSE)+
+      facet_wrap(~binomial)+
+      xlim(0,7500)
+```
+
+## Explore expression
 ```{r echo = TRUE, include = TRUE}
 
 ggplot(data, aes(log(TPM), fill = dataset, colour = dataset)) +
@@ -180,7 +238,11 @@ ggplot(data, aes(log(TPM), fill = dataset, colour = dataset)) +
       ylab('Density')+
       labs(colour='Dataset')+
       guides(fill=FALSE)
+```
 
+### Split by species
+
+```{r echo = TRUE, include = TRUE}
 ggplot(data, aes(log(TPM), fill = dataset, colour = dataset)) +
   geom_density(alpha = 0.1)+
   scale_fill_manual(values = wes_palette("Royal1"))+
