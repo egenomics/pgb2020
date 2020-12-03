@@ -22,15 +22,50 @@ library(kableExtra)
 library(dplyr)
 #install.packages("knitr")
 library(knitr)
-#install.packages('DT')
-library(DT)
 
-#library(tidyr)
-#library(data.table)
-#library(rlist)
-#library(stringr)
+
 main_dir="/cloud/project/"
+main_dir="/home/jl/Dropbox/university/UPF_msc/PGB_2020/project_summary/pgb2020"
 raw_dir=paste0(main_dir,"/PGB2020_raw_files")
+```
+
+First a basic look at number of contigs / chromosomes in the different species.
+
+```{r echo = FALSE, results = 'Summary Table', include=TRUE}
+file.list<- list.files(path=paste0(main_dir,'/results/'), pattern='*fasta_*', recursive = TRUE, full.names = FALSE)
+
+fasta_data<-data.frame()
+#Concatenate all datasets together. File name as column
+for (f in file.list) {
+    #set filename and dataset
+    df <- read.table(paste0(main_dir,'/results/',f), sep='\t', header=FALSE)
+    df$fname <- f
+    df$species <- unlist(strsplit(f,'_'))[1]
+    fasta_data <- rbind(fasta_data, df)
+}
+names(fasta_data)<-c('contig','length','fname','species')
+
+fasta_summary <- fasta_data %>% group_by(species) %>% summarise(ncontigs=n(), length=sum(length))
+
+ggplot(data=fasta_summary, aes(x=reorder(species, ncontigs), y=ncontigs, fill=species)) +
+  geom_bar(stat="identity", position=position_dodge()) +
+  geom_text(aes(label=paste0(round(length/1000000,2),'Mb')), vjust=0.5, hjust=-0.1, color="black",
+            position = position_dodge(0.9), size=3.5) +
+            scale_fill_brewer(palette="Set3") +
+  theme_minimal() +
+  ylab('Number of contigs')+
+  xlab('Species')+
+  labs(fill='Dataset') +
+  coord_flip()
+
+  ggplot(data=fasta_data, aes(x=species, y=length/1000)) +
+    geom_jitter(aes(color=species)) +
+    scale_color_brewer(palette="Set3") +
+    theme_minimal() +
+    ylab('Contig sizes (Kb)')+
+    xlab('Species')+
+    labs(fill='Dataset') +
+    coord_flip()
 ```
 
 Next we are going to load the dataset basic statistics that we generated with the bash script from your files, so we can plot it.
@@ -43,7 +78,7 @@ kbl(summary_table) %>%
   kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"))
 ```
 
-
+Number of reconstructed transcripts per species
 ```{r echo = TRUE, include = TRUE, fig.width = 10, fig.height=8}
 ggplot(data=summary_table, aes(x=reorder(binomial,num_transcripts), y=num_transcripts, fill=dataset)) +
   geom_bar(stat="identity", position=position_dodge()) +
@@ -61,15 +96,15 @@ ggplot(data=summary_table, aes(x=reorder(binomial,num_transcripts), y=num_transc
 knitr::include_graphics(paste0(main_dir,"metadata/tree.png"))
 ```
 
-
+We can explore the average size of the reconstructed transcript by dataset
 ```{r echo = TRUE, include = TRUE}
-ggplot(data=summary_table, aes(x=reorder(binomial,total_transcript_length), y=total_transcript_length/1000000, fill=dataset)) +
+ggplot(data=summary_table, aes(x=reorder(binomial,total_transcript_length), y=((total_transcript_length/num_transcripts)/1000), fill=dataset)) +
     geom_bar(stat="identity", position=position_dodge()) +
-    geom_text(aes(label=paste0(total_transcript_length/1000000,' Mb')), vjust=0.5, hjust=-0.1, color="black",
+    geom_text(aes(label=paste0(round((total_transcript_length/num_transcripts)/1000,2),' Kb')), vjust=0.5, hjust=-0.1, color="black",
               position = position_dodge(0.9), size=3.5) +
     scale_fill_brewer(palette="Set1") +
     theme_minimal() +
-    xlab('Number of reconstructed transcripts')+
+    xlab('Reconstructed transcript length / Number of reconstructed transcripts')+
     ylab('Species')+
     labs(fill='Dataset') +
     coord_flip()
