@@ -1,21 +1,50 @@
+---
+title: "PGB 2020 project analysis"
+output: html_document
+---
+
+I am using Rmarkdown to show some results. The advantage is that in the same document I can show the code, execute it, show the results of such a code and comment the results and methods.
+
+First we are going to load some libraries that we will use. They have install instructions in commented lines (if you don't have such libraries):
+```{r echo = TRUE, include = FALSE}
 library(ggplot2)
+#install.packages('doBy')
+#install.packages('RSQLite')
+#install.packages('DBI')
 #install.packages("refGenome")
+#install.packages("/cloud/project/refGenome_1.7.7.tar.gz", repos = NULL, type = "source")
 library(refGenome)
 #install.packages("wesanderson")
 library(wesanderson)
-
+#install.packages("kableExtra")
+library(kableExtra)
+#install.packages("dplyr")
 library(dplyr)
+#install.packages("knitr")
+library(knitr)
+#install.packages('DT')
+library(DT)
+
 #library(tidyr)
 #library(data.table)
 #library(rlist)
 #library(stringr)
-main_dir="/home/jl/Dropbox/university/UPF_msc/PGB_2020/project_summary"
+main_dir="/cloud/project/"
 raw_dir=paste0(main_dir,"/PGB2020_raw_files")
+```
 
+Next we are going to load the dataset basic statistics that we generated with the bash script from your files, so we can plot it.
+
+```{r echo = FALSE, results = 'Summary Table'}
 summary_table <- read.table(paste0(main_dir,'/results/basic_statistics.tsv'), sep='\t', header=TRUE)
-
 summary_table$binomial <- paste0(summary_table$genus,' ',summary_table$species)
 
+kbl(summary_table) %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"))
+```
+
+
+```{r echo = TRUE, include = TRUE, fig.width = 10, fig.height=8}
 ggplot(data=summary_table, aes(x=reorder(binomial,num_transcripts), y=num_transcripts, fill=dataset)) +
   geom_bar(stat="identity", position=position_dodge()) +
   geom_text(aes(label=num_transcripts), vjust=0.5, hjust=-0.1, color="black",
@@ -26,7 +55,14 @@ ggplot(data=summary_table, aes(x=reorder(binomial,num_transcripts), y=num_transc
   ylab('Species')+
   labs(fill='Dataset') +
   coord_flip()
+```
 
+```{r yeast_tree, echo=FALSE, fig.cap="yeast evolotionary tree", out.width = '100%'}
+knitr::include_graphics(paste0(main_dir,"metadata/tree.png"))
+```
+
+
+```{r echo = TRUE, include = TRUE}
 ggplot(data=summary_table, aes(x=reorder(binomial,total_transcript_length), y=total_transcript_length/1000000, fill=dataset)) +
     geom_bar(stat="identity", position=position_dodge()) +
     geom_text(aes(label=paste0(total_transcript_length/1000000,' Mb')), vjust=0.5, hjust=-0.1, color="black",
@@ -37,6 +73,8 @@ ggplot(data=summary_table, aes(x=reorder(binomial,total_transcript_length), y=to
     ylab('Species')+
     labs(fill='Dataset') +
     coord_flip()
+```
+```{r echo = TRUE, include = TRUE}
 
 ##Construct our big dataset from student's independent files (known and novel gff)
 raw_data <- data.frame() #Start empty
@@ -45,7 +83,6 @@ setwd(raw_dir)
 ##Known
 #Search all files that meet the pattern "know"
 file.list<- list.files(path=raw_dir, pattern='*know*', recursive = TRUE, full.names = FALSE)
-
 
 #Concatenate all datasets together. File name as column
 for (f in file.list) {
@@ -85,13 +122,19 @@ for (f in file.list) {
 
 #Convert variables to numeric
 raw_data[, c(10,16,17)] <- sapply(raw_data[, c(10,16,17)], as.numeric)
+```
 
+```{r echo = TRUE, include = TRUE}
 #Get info from species by joining the summary dataset
 fname2species <- summary_table %>%
 select(binomial, fname)
 
 data <- left_join(raw_data,fname2species, by="fname")
+```
 
+Now we have our dataset containing all the information in the gff files you generated, together with the species and file names. We can play a bit with it
+
+```{r echo = TRUE, include = TRUE}
 
 ggplot(data, aes(log(TPM), fill = dataset, colour = dataset)) +
   geom_density(alpha = 0.1)+
@@ -113,3 +156,4 @@ ggplot(data, aes(log(TPM), fill = dataset, colour = dataset)) +
       labs(colour='Dataset')+
       guides(fill=FALSE)+
       facet_wrap(~binomial)
+```
