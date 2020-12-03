@@ -48,5 +48,6 @@ do
   species=${binomial[1]} #Position two is species
   file=`find $fasta_location'/'${genus}'_'${species}'/' -iname "*$species.fa" -type f`
   output_f=${main_dir}/results/${species}_fasta_lengths.tsv
+  #Call python script to obtain sequence lengths
   python $main_dir/scripts/seq_len.py $file > $output_f
 done < "$input"

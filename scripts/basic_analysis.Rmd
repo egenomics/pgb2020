@@ -84,7 +84,7 @@ ggplot(data=fasta_summary, aes(x=reorder(species, ncontigs), y=ncontigs, fill=sp
 Next we are going to load the dataset basic statistics that we generated with the bash script from your files, so we can plot it.
 
 ## Basic statistics
-```{r echo = FALSE, results = 'Summary Table'}
+```{r echo = TRUE, include = TRUE, results = 'Summary Table'}
 summary_table <- read.table(paste0(main_dir,'/results/basic_statistics.tsv'), sep='\t', header=TRUE)
 summary_table$binomial <- paste0(summary_table$genus,' ',summary_table$species)
 
@@ -211,7 +211,7 @@ ggplot(data, aes((end-start), fill = dataset, colour = dataset)) +
 
 What do you see? What do you think we should plot to have more information?
 
-```{r echo = TRUE, include = TRUE}
+```{r echo = TRUE, include = TRUE, fig.width = 12, fig.height=9}
 
 ggplot(data, aes((end-start), fill = dataset, colour = dataset)) +
   geom_density(alpha = 0.1)+
@@ -242,7 +242,7 @@ ggplot(data, aes(log(TPM), fill = dataset, colour = dataset)) +
 
 ### Split by species
 
-```{r echo = TRUE, include = TRUE}
+```{r echo = TRUE, include = TRUE, fig.width = 12, fig.height=9}
 ggplot(data, aes(log(TPM), fill = dataset, colour = dataset)) +
   geom_density(alpha = 0.1)+
   scale_fill_manual(values = wes_palette("Royal1"))+
